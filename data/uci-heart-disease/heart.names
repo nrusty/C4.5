@@ -1,0 +1,14 @@
+0, 1, 2, 3, 4
+age : continuous
+sex :  0,1
+cp : 1, 2, 3
+trestbps : continuous
+chol : continuous
+fbs : continuous
+restecg : 0, 1, 2
+thalach : continuous
+exang : 0, 1
+oldpeak : continuous
+slope : 1, 2, 3
+ca : 0, 1, 2, 3
+thal : 3,6,7
