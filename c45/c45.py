@@ -1,4 +1,6 @@
 import math
+import random ## added
+trainRate = .8
 class C45:
 
 	"""Creates a decision tree with C4.5 algorithm"""
@@ -6,6 +8,7 @@ class C45:
 		self.filePathToData = pathToData
 		self.filePathToNames = pathToNames
 		self.data = []
+		self.testdata = [] ## added
 		self.classes = []
 		self.numAttributes = -1 
 		self.attrValues = {}
@@ -26,8 +29,14 @@ class C45:
 		with open(self.filePathToData, "r") as file:
 			for line in file:
 				row = [x.strip() for x in line.split(",")]
+				## Binary classification
+				if row[-1] != '0' and row[-1] != '1':
+					row[-1] = '1'
 				if row != [] or row != [""]:
-					self.data.append(row)
+					if random.random() < trainRate:
+						self.data.append(row)
+					else:
+						self.testdata.append(row)
 
 	def preprocessData(self):
 		for index,row in enumerate(self.data):
@@ -43,10 +52,14 @@ class C45:
 			if node.threshold is None:
 				#discrete
 				for index,child in enumerate(node.children):
-					if child.isLeaf:
-						print(indent + node.label + " = " + attributes[index] + " : " + child.label)
+					if child.isLeaf:  ## str(a[index]) was attributes[index]
+						a = []
+						a = self.attrValues.get(node.label)
+						print(indent + node.label + " = " + str(a[index]) + " : " + child.label) 
 					else:
-						print(indent + node.label + " = " + attributes[index] + " : ")
+						a = []
+						a = self.attrValues.get(node.label)
+						print(indent + node.label + " = " + str(a[index])  + " : ")
 						self.printNode(child, indent + "	")
 			else:
 				#numerical
@@ -71,10 +84,9 @@ class C45:
 
 	def recursiveGenerateTree(self, curData, curAttributes):
 		allSame = self.allSameClass(curData)
-
 		if len(curData) == 0:
-			#Fail
-			return Node(True, "Fail", None)
+			## None found was Fail
+			return Node(True, "None Found", None)
 		elif allSame is not False:
 			#return a node with that class
 			return Node(True, allSame, None)
@@ -100,10 +112,13 @@ class C45:
 
 
 	def allSameClass(self, data):
-		for row in data:
-			if row[-1] != data[0][-1]:
-				return False
-		return data[0][-1]
+		if len(data) == 0:  ## added to avoid empy data error
+			return False
+		else:
+			for row in data:
+				if row[-1] != data[0][-1]:
+					return False
+			return data[0][-1]
 
 	def isAttrDiscrete(self, attribute):
 		if attribute not in self.attributes:
@@ -112,6 +127,21 @@ class C45:
 			return False
 		else:
 			return True
+
+	def gain(self,unionSet, subsets):
+		#input : data and disjoint subsets of it
+		#output : information gain
+		S = len(unionSet)
+		#calculate impurity before split
+		impurityBeforeSplit = self.entropy(unionSet)
+		#calculate impurity after split
+		weights = [len(subset)/S for subset in subsets]
+		impurityAfterSplit = 0
+		for i in range(len(subsets)):
+			impurityAfterSplit += weights[i]*self.entropy(subsets[i])
+		#calculate total gain
+		totalGain = impurityBeforeSplit - impurityAfterSplit
+		return totalGain
 
 	def splitAttribute(self, curData, curAttributes):
 		splitted = []
@@ -129,10 +159,10 @@ class C45:
 				subsets = [[] for a in valuesForAttribute]
 				for row in curData:
 					for index in range(len(valuesForAttribute)):
-						if row[i] == valuesForAttribute[index]:
+						if row[indexOfAttribute] == valuesForAttribute[index]:   ## indexOfAttribute was i
 							subsets[index].append(row)
 							break
-				e = gain(curData, subsets)
+				e = self.gain(curData, subsets) ## self.gain was gain
 				if e > maxEnt:
 					maxEnt = e
 					splitted = subsets
@@ -161,21 +191,6 @@ class C45:
 							best_threshold = threshold
 		return (best_attribute,best_threshold,splitted)
 
-	def gain(self,unionSet, subsets):
-		#input : data and disjoint subsets of it
-		#output : information gain
-		S = len(unionSet)
-		#calculate impurity before split
-		impurityBeforeSplit = self.entropy(unionSet)
-		#calculate impurity after split
-		weights = [len(subset)/S for subset in subsets]
-		impurityAfterSplit = 0
-		for i in range(len(subsets)):
-			impurityAfterSplit += weights[i]*self.entropy(subsets[i])
-		#calculate total gain
-		totalGain = impurityBeforeSplit - impurityAfterSplit
-		return totalGain
-
 	def entropy(self, dataSet):
 		S = len(dataSet)
 		if S == 0:
@@ -197,11 +212,40 @@ class C45:
 		else:
 			return math.log(x,2)
 
+	def testNode(self, node, tesData):
+		if not node.isLeaf:
+			if node.threshold is None:
+				#discrete
+				for index,child in enumerate(node.children):
+					if child.isLeaf:
+						a = []
+						a = self.attrValues.get(node.label)
+						if tesData[index] == a[index]:
+							return child.label
+					else:
+						a = []
+						a = self.attrValues.get(node.label)
+						print(indent + node.label + " = " + str(a[index])  + " : ")
+						self.printNode(child, indent + "	")
+			else:
+				#numerical
+				leftChild = node.children[0]
+				rightChild = node.children[1]
+				if leftChild.isLeaf:
+					print(indent + node.label + " <= " + str(node.threshold) + " : " + leftChild.label)
+				else:
+					print(indent + node.label + " <= " + str(node.threshold)+" : ")
+					self.printNode(leftChild, indent + "	")
+
+				if rightChild.isLeaf:
+					print(indent + node.label + " > " + str(node.threshold) + " : " + rightChild.label)
+				else:
+					print(indent + node.label + " > " + str(node.threshold) + " : ")
+					self.printNode(rightChild , indent + "	")
+
 class Node:
 	def __init__(self,isLeaf, label, threshold):
 		self.label = label
 		self.threshold = threshold
 		self.isLeaf = isLeaf
 		self.children = []
-
-
