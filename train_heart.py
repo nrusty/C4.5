@@ -28,14 +28,12 @@ c = tree.DecisionTreeClassifier(criterion = "entropy", random_state = 100,
 # Train model
 c.fit(x_train, y_train)
 
-# Predict
-acc_train = np.sum(c.predict(x_train) == y_train) / float(y_train.size)
-acc_test = np.sum(c.predict(x_test) == y_test) / float(y_test.size)
-print("acc train:", acc_train)
-print("acc test:", acc_test)
-
-y_pred = c.predict(x_test)
-print y_pred
+# Metric - Predict
+y_pred_train = c.predict(x_train)
+print "acc train: ", accuracy_score(y_train, y_pred_train) * 100
+y_pred_test = c.predict(x_test)
+print "acc test: ", accuracy_score(y_test, y_pred_test) * 100
+print y_pred_test
 
 #Plot rules
 feature_names = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal']
